@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Talk Card</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            text-align: center;
+        }
+
+        h1 {
+            color: white;
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .card-container {
+            perspective: 1000px;
+            width: 350px;
+            height: 500px;
+            margin: 0 auto;
+        }
+
+        .card {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.8s cubic-bezier(0.4, 0.0, 0.2, 1);
+            cursor: pointer;
+        }
+
+        .card.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+
+        .card-front {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border: 3px solid rgba(255,255,255,0.3);
+        }
+
+        .card-back {
+            background: white;
+            transform: rotateY(180deg);
+        }
+
+        .card-pattern {
+            font-size: 4rem;
+            color: rgba(255,255,255,0.5);
+        }
+
+        .quote-text {
+            font-size: 1.5rem;
+            color: #333;
+            line-height: 1.8;
+            font-style: italic;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .button-container {
+            margin-top: 3rem;
+        }
+
+        button {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .loading {
+            color: white;
+            font-size: 1.2rem;
+            margin-top: 2rem;
+        }
+
+        .error {
+            color: #ffcccb;
+            font-size: 1rem;
+            margin-top: 2rem;
+            background: rgba(255,0,0,0.2);
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .card-container {
+                width: 300px;
+                height: 450px;
+            }
+            
+            .quote-text {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌟 Deep Talk Card 🌟</h1>
+        
+        <div class="card-container">
+            <div class="card" id="card">
+                <div class="card-face card-front">
+                    <div class="card-pattern">💭</div>
+                </div>
+                <div class="card-face card-back">
+                    <p class="quote-text" id="quoteText">คลิกที่การ์ดเพื่อดูข้อความ</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="button-container">
+            <button id="newCardBtn">การ์ดใหม่</button>
+        </div>
+
+        <div id="message"></div>
+    </div>
+
+    <script>
+        const card = document.getElementById('card');
+        const quoteText = document.getElementById('quoteText');
+        const newCardBtn = document.getElementById('newCardBtn');
+        const message = document.getElementById('message');
+
+        let quotes = [];
+        let currentQuote = null;
+        let isFlipped = false;
+
+        // โหลดข้อมูลจาก JSON
+        async function loadQuotes() {
+            try {
+                message.innerHTML = '<p class="loading">กำลังโหลดข้อมูล...</p>';
+                
+                // URL ของไฟล์ quotes.json
+                const response = await fetch('https://d-nattakitti.github.io/deep-talk-api/quotes.json');
+                
+                if (!response.ok) {
+                    throw new Error('ไม่สามารถโหลดข้อมูลได้');
+                }
+                
+                quotes = await response.json();
+                message.innerHTML = '';
+                
+                // เลือกข้อความแรก
+                selectRandomQuote();
+                
+            } catch (error) {
+                message.innerHTML = `<p class="error">เกิดข้อผิดพลาด: ${error.message}<br>กรุณาตรวจสอบ URL ของไฟล์ JSON</p>`;
+                
+                // ใช้ข้อมูลตัวอย่างถ้าโหลดไม่ได้
+                quotes = [
+                    {"id": 1, "text": "Sometimes silence is the loudest answer."},
+                    {"id": 2, "text": "Growth begins at the end of your comfort zone."},
+                    {"id": 3, "text": "The only way out is through."},
+                    {"id": 4, "text": "Not all who wander are lost."},
+                    {"id": 5, "text": "Be the change you wish to see."}
+                ];
+                
+                setTimeout(() => {
+                    message.innerHTML = '<p class="loading">ใช้ข้อมูลตัวอย่าง</p>';
+                    setTimeout(() => {
+                        message.innerHTML = '';
+                    }, 2000);
+                }, 1000);
+                
+                selectRandomQuote();
+            }
+        }
+
+        // สุ่มเลือกข้อความ
+        function selectRandomQuote() {
+            if (quotes.length > 0) {
+                const randomIndex = Math.floor(Math.random() * quotes.length);
+                currentQuote = quotes[randomIndex];
+                quoteText.textContent = currentQuote.text;
+            }
+        }
+
+        // พลิกการ์ด
+        function flipCard() {
+            isFlipped = !isFlipped;
+            card.classList.toggle('flipped');
+        }
+
+        // การ์ดใหม่
+        function newCard() {
+            if (isFlipped) {
+                // พลิกกลับก่อน
+                flipCard();
+                
+                // รอให้แอนิเมชันเสร็จแล้วค่อยสุ่มใหม่
+                setTimeout(() => {
+                    selectRandomQuote();
+                }, 400);
+            } else {
+                selectRandomQuote();
+            }
+        }
+
+        // Event Listeners
+        card.addEventListener('click', flipCard);
+        newCardBtn.addEventListener('click', newCard);
+
+        // โหลดข้อมูลเมื่อเริ่มต้น
+        loadQuotes();
+    </script>
+</body>
+</html>
